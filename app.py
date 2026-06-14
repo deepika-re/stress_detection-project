@@ -34,6 +34,12 @@ def init_db():
         id INTEGER PRIMARY KEY,
         user_id INTEGER,
         timestamp TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS facial_readings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    dominant_emotion TEXT,
+    stress_score REAL,
+    timestamp TEXT)''')
     conn.commit()
     conn.close()
 
@@ -175,6 +181,18 @@ def active_user():
         return jsonify({"user_id": row[0]})
     return jsonify({"user_id": None})
 
+@app.route('/api/facial-data', methods=['POST'])
+def facial_data():
+    data = request.json
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute('''INSERT INTO facial_readings (user_id, dominant_emotion, stress_score, timestamp)
+                 VALUES (?, ?, ?, ?)''',
+              (data['user_id'], data['dominant_emotion'],
+               data['stress_score_from_face'], datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
 @app.route('/api/whoami')
 def whoami():
     return jsonify({
@@ -190,7 +208,8 @@ def receive_data():
     user_id = data['user_id']
     hr = data.get('heart_rate', 0)
     gsr = data['gsr']
-    stress_level = calculate_stress(hr, gsr)
+    facial_score = get_latest_facial_score(user_id)
+    stress_level = calculate_stress(hr, gsr, facial_score)
     timestamp = datetime.now().isoformat()
     conn = sqlite3.connect(DB)
     c = conn.cursor()
