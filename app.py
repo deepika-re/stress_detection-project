@@ -102,8 +102,9 @@ def check_and_alert(user_id, stress_level):
     conn.close()
 
 def send_email_alert(user_email, caregiver_email, name):
-    sender_email = "rdeepika0509@gmail.com"
-    sender_password = "jsqm dgwv lcxu pgbj"
+    import os
+    sender_email = os.environ.get('EMAIL_USER')
+    sender_password = os.environ.get('EMAIL_PASS')
     msg = MIMEText(f"ALERT: {name} has shown HIGH stress levels for over 1 minute. Please check on them immediately.")
     msg['Subject'] = 'Stress Alert - Immediate Attention Needed'
     msg['From'] = sender_email
