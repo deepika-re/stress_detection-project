@@ -4,21 +4,34 @@
     <title>Stress Monitor Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial; background: #f0f2f5; padding: 20px; }
-        .card { background: white; border-radius: 10px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .value { font-size: 2em; font-weight: bold; }
-        .stress-banner { padding: 15px; border-radius: 10px; text-align: center; font-size: 1.5em; color: white; margin-bottom: 15px; }
-        .bg-Low { background: green; }
-        .bg-Medium { background: orange; }
-        .bg-High { background: red; }
         .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .topbar h1 { margin: 0; }
+        .topbar h1 { font-size: 1.8em; }
         .welcome { color: #666; margin-right: 15px; font-size: 1em; }
         .logout-btn { background: #e53935; color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.9em; }
+        .card { background: white; border-radius: 10px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 10px 0; }
+        .value { font-size: 2em; font-weight: bold; margin: 10px 0 5px; }
+        .stress-banner { padding: 15px; border-radius: 10px; text-align: center; font-size: 1.5em; color: white; margin-bottom: 15px; }
+        .bg-Low { background: #2e7d32; }
+        .bg-Medium { background: #ef6c00; }
+        .bg-High { background: #c62828; animation: pulse 1s infinite; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        .tip-box { display: none; background: white; border-radius: 10px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .tip-box ul { padding-left: 20px; line-height: 2.2; margin-top: 10px; }
+        .tip-box li { font-size: 0.95em; color: #333; }
+        .tip-title { font-size: 1.1em; font-weight: bold; margin-bottom: 5px; }
+        .chart-card { background: white; border-radius: 10px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .timestamp { font-size: 0.75em; color: #999; margin-top: 5px; }
     </style>
 </head>
 <body>
+
     <div class="topbar">
         <h1>🧠 Stress Detection Dashboard</h1>
         <div>
@@ -30,55 +43,122 @@
     <div id="stressBanner" class="stress-banner bg-Low">Stress Level: Low</div>
 
     <div class="grid">
-        <div class="card"><h3>Heart Rate</h3><div class="value" id="hr">--</div> bpm</div>
-        <div class="card"><h3>GSR</h3><div class="value" id="gsr">--</div></div>
+        <div class="card">
+            <h3>❤️ Heart Rate</h3>
+            <div class="value" id="hr">--</div>
+            <span>bpm</span>
+            <div class="timestamp" id="hrTime"></div>
+        </div>
+        <div class="card">
+            <h3>🖐️ GSR (Skin Response)</h3>
+            <div class="value" id="gsr">--</div>
+            <span>units</span>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>History (Last 100 readings)</h3>
-        <canvas id="historyChart"></canvas>
+    <div class="tip-box" id="tipBox">
+        <div class="tip-title" id="tipTitle">💡 Stress Relief Tips</div>
+        <ul id="tipList"></ul>
+    </div>
+
+    <div class="chart-card">
+        <h3>📈 History (Last 100 readings)</h3>
+        <canvas id="historyChart" height="100"></canvas>
     </div>
 
     <script>
         const USER_ID = {{ user_id | default(1) }};
 
+        const TIPS = {
+            Medium: [
+                "🧘 Take 5 deep breaths — inhale 4s, hold 4s, exhale 4s",
+                "💧 Drink a glass of water and step away from your screen for 2 minutes",
+                "🎵 Listen to calm music for a few minutes",
+                "✋ Stretch your neck and shoulders — roll them back slowly",
+                "😊 Try smiling for 30 seconds — it signals your brain to relax"
+            ],
+            High: [
+                "🚨 Your stress is HIGH — please take a break immediately",
+                "🫁 Practice box breathing: inhale 4s → hold 4s → exhale 4s → hold 4s",
+                "🚶 Walk outside for at least 5 minutes — fresh air helps",
+                "📵 Put your phone down and close unnecessary tabs",
+                "🤝 Talk to someone you trust — don't bottle it up",
+                "💤 If possible, lie down and close your eyes for 10 minutes"
+            ]
+        };
+
         async function updateLatest() {
-            const res = await fetch(`/api/latest/${USER_ID}`);
-            const data = await res.json();
-            if (data.heart_rate !== undefined) {
-                document.getElementById('hr').textContent = data.heart_rate;
-                document.getElementById('gsr').textContent = data.gsr;
-                const banner = document.getElementById('stressBanner');
-                banner.textContent = `Stress Level: ${data.stress_level}`;
-                banner.className = `stress-banner bg-${data.stress_level}`;
+            try {
+                const res = await fetch(`/api/latest/${USER_ID}`);
+                const data = await res.json();
+                if (data.heart_rate !== undefined) {
+                    document.getElementById('hr').textContent = data.heart_rate;
+                    document.getElementById('gsr').textContent = data.gsr;
+                    document.getElementById('hrTime').textContent = 
+                        'Last updated: ' + new Date(data.timestamp).toLocaleTimeString();
+
+                    const banner = document.getElementById('stressBanner');
+                    banner.textContent = `Stress Level: ${data.stress_level}`;
+                    banner.className = `stress-banner bg-${data.stress_level}`;
+
+                    const tipBox = document.getElementById('tipBox');
+                    const tipList = document.getElementById('tipList');
+                    const tipTitle = document.getElementById('tipTitle');
+
+                    if (data.stress_level === 'Medium' || data.stress_level === 'High') {
+                        tipBox.style.display = 'block';
+                        tipBox.style.borderLeft = data.stress_level === 'High'
+                            ? '5px solid #c62828'
+                            : '5px solid #ef6c00';
+                        tipTitle.textContent = data.stress_level === 'High'
+                            ? '🚨 High Stress Detected — Act Now!'
+                            : '💡 Feeling Stressed? Try These Tips';
+                        tipList.innerHTML = TIPS[data.stress_level]
+                            .map(tip => `<li>${tip}</li>`)
+                            .join('');
+                    } else {
+                        tipBox.style.display = 'none';
+                    }
+                }
+            } catch(e) {
+                console.error('Update error:', e);
             }
         }
 
         let chart;
         async function updateHistory() {
-            const res = await fetch(`/api/history/${USER_ID}`);
-            const data = await res.json();
-            const labels = data.map(d => new Date(d.timestamp).toLocaleTimeString()).reverse();
-            const hrData = data.map(d => d.heart_rate).reverse();
-            const gsrData = data.map(d => d.gsr).reverse();
+            try {
+                const res = await fetch(`/api/history/${USER_ID}`);
+                const data = await res.json();
+                const labels = data.map(d => new Date(d.timestamp).toLocaleTimeString()).reverse();
+                const hrData = data.map(d => d.heart_rate).reverse();
+                const gsrData = data.map(d => d.gsr).reverse();
 
-            if (!chart) {
-                const ctx = document.getElementById('historyChart').getContext('2d');
-                chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            { label: 'Heart Rate', data: hrData, borderColor: 'red', fill: false },
-                            { label: 'GSR', data: gsrData, borderColor: 'blue', fill: false }
-                        ]
-                    }
-                });
-            } else {
-                chart.data.labels = labels;
-                chart.data.datasets[0].data = hrData;
-                chart.data.datasets[1].data = gsrData;
-                chart.update();
+                if (!chart) {
+                    const ctx = document.getElementById('historyChart').getContext('2d');
+                    chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                { label: 'Heart Rate', data: hrData, borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.05)', fill: true, tension: 0.3 },
+                                { label: 'GSR', data: gsrData, borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.05)', fill: true, tension: 0.3 }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { position: 'top' } },
+                            scales: { y: { beginAtZero: true } }
+                        }
+                    });
+                } else {
+                    chart.data.labels = labels;
+                    chart.data.datasets[0].data = hrData;
+                    chart.data.datasets[1].data = gsrData;
+                    chart.update();
+                }
+            } catch(e) {
+                console.error('History error:', e);
             }
         }
 
