@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stress Monitor Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        body { font-family: Arial; background: #f0f2f5; padding: 20px; }
+        .card { background: white; border-radius: 10px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .value { font-size: 2em; font-weight: bold; }
+        .stress-banner { padding: 15px; border-radius: 10px; text-align: center; font-size: 1.5em; color: white; margin-bottom: 15px; }
+        .bg-Low { background: green; }
+        .bg-Medium { background: orange; }
+        .bg-High { background: red; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .topbar h1 { margin: 0; }
+        .welcome { color: #666; margin-right: 15px; font-size: 1em; }
+        .logout-btn { background: #e53935; color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <h1>🧠 Stress Detection Dashboard</h1>
+        <div>
+            <span class="welcome">Welcome, {{ user_name }}</span>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </div>
+
+    <div id="stressBanner" class="stress-banner bg-Low">Stress Level: Low</div>
+
+    <div class="grid">
+        <div class="card"><h3>Heart Rate</h3><div class="value" id="hr">--</div> bpm</div>
+        <div class="card"><h3>GSR</h3><div class="value" id="gsr">--</div></div>
+    </div>
+
+    <div class="card">
+        <h3>History (Last 100 readings)</h3>
+        <canvas id="historyChart"></canvas>
+    </div>
+
+    <script>
+        const USER_ID = {{ user_id | default(1) }};
+
+        async function updateLatest() {
+            const res = await fetch(`/api/latest/${USER_ID}`);
+            const data = await res.json();
+            if (data.heart_rate !== undefined) {
+                document.getElementById('hr').textContent = data.heart_rate;
+                document.getElementById('gsr').textContent = data.gsr;
+                const banner = document.getElementById('stressBanner');
+                banner.textContent = `Stress Level: ${data.stress_level}`;
+                banner.className = `stress-banner bg-${data.stress_level}`;
+            }
+        }
+
+        let chart;
+        async function updateHistory() {
+            const res = await fetch(`/api/history/${USER_ID}`);
+            const data = await res.json();
+            const labels = data.map(d => new Date(d.timestamp).toLocaleTimeString()).reverse();
+            const hrData = data.map(d => d.heart_rate).reverse();
+            const gsrData = data.map(d => d.gsr).reverse();
+
+            if (!chart) {
+                const ctx = document.getElementById('historyChart').getContext('2d');
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'Heart Rate', data: hrData, borderColor: 'red', fill: false },
+                            { label: 'GSR', data: gsrData, borderColor: 'blue', fill: false }
+                        ]
+                    }
+                });
+            } else {
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = hrData;
+                chart.data.datasets[1].data = gsrData;
+                chart.update();
+            }
+        }
+
+        setInterval(updateLatest, 2000);
+        setInterval(updateHistory, 5000);
+        updateLatest();
+        updateHistory();
+    </script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+.venv
+stress_data.db
+__pycache__
