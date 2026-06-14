@@ -3,8 +3,7 @@ import requests
 import time
 import numpy as np
 
-BACKEND_URL = 'http://localhost:8080/api/facial-data'
-
+BACKEND_URL = 'https://stress-alert-detection-production.up.railway.app/api/facial-data'
 # Load OpenCV's built-in face detector
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
