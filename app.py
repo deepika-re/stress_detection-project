@@ -35,17 +35,17 @@ def init_db():
         user_id INTEGER,
         timestamp TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS facial_readings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    dominant_emotion TEXT,
-    stress_score REAL,
-    timestamp TEXT)''')
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        dominant_emotion TEXT,
+        stress_score REAL,
+        timestamp TEXT)''')
     conn.commit()
     conn.close()
 
 init_db()
 
-def calculate_stress(hr, gsr):
+def calculate_stress(hr, gsr, facial_score=0.0):
     score = 0
     if hr > 100:
         score += 2
@@ -55,12 +55,29 @@ def calculate_stress(hr, gsr):
         score += 2
     elif gsr > 400:
         score += 1
+    if facial_score >= 0.5:
+        score += 2
+    elif facial_score >= 0.3:
+        score += 1
     if score >= 3:
         return "High"
     elif score >= 1:
         return "Medium"
     else:
         return "Low"
+
+def get_latest_facial_score(user_id):
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    try:
+        c.execute('''SELECT stress_score FROM facial_readings
+                     WHERE user_id=? ORDER BY id DESC LIMIT 1''', (user_id,))
+        row = c.fetchone()
+        conn.close()
+        return row[0] if row else 0.0
+    except:
+        conn.close()
+        return 0.0
 
 def check_and_alert(user_id, stress_level):
     print(f">>> check_and_alert called: user={user_id}, stress={stress_level}")
@@ -181,18 +198,6 @@ def active_user():
         return jsonify({"user_id": row[0]})
     return jsonify({"user_id": None})
 
-@app.route('/api/facial-data', methods=['POST'])
-def facial_data():
-    data = request.json
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-    c.execute('''INSERT INTO facial_readings (user_id, dominant_emotion, stress_score, timestamp)
-                 VALUES (?, ?, ?, ?)''',
-              (data['user_id'], data['dominant_emotion'],
-               data['stress_score_from_face'], datetime.now().isoformat()))
-    conn.commit()
-    conn.close()
-    return jsonify({"status": "ok"})
 @app.route('/api/whoami')
 def whoami():
     return jsonify({
@@ -243,6 +248,19 @@ def get_history(user_id):
     conn.close()
     return jsonify([{"heart_rate": r[0], "gsr": r[1],
                      "stress_level": r[2], "timestamp": r[3]} for r in rows])
+
+@app.route('/api/facial-data', methods=['POST'])
+def facial_data():
+    data = request.json
+    conn = sqlite3.connect(DB)
+    c = conn.cursor()
+    c.execute('''INSERT INTO facial_readings (user_id, dominant_emotion, stress_score, timestamp)
+                 VALUES (?, ?, ?, ?)''',
+              (data['user_id'], data['dominant_emotion'],
+               data['stress_score_from_face'], datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
 
 if __name__ == '__main__':
     app.run(debug=False, port=8080)
