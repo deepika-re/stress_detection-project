@@ -15,7 +15,6 @@ app = Flask(__name__)
 app.secret_key = b'stress_detect_secret_key_fixed_2024'
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# ---------- DB Connection ----------
 def get_db():
     db_url = os.environ.get('DATABASE_PUBLIC_URL') or os.environ.get('DATABASE_URL')
     if db_url:
@@ -98,7 +97,6 @@ def get_latest_facial_score(user_id):
         return 0.0
 
 def check_and_alert(user_id, stress_level):
-    print(f">>> check_and_alert called: user={user_id}, stress={stress_level}")
     if stress_level != "High":
         return
     try:
@@ -109,7 +107,6 @@ def check_and_alert(user_id, stress_level):
                      WHERE user_id=%s AND stress_level='High' AND timestamp >= %s''',
                   (user_id, one_min_ago))
         count = c.fetchone()[0]
-        print(f">>> High stress count: {count}")
         if count >= 1:
             c.execute('SELECT email, caregiver_email, name FROM users WHERE id=%s', (user_id,))
             user = c.fetchone()
@@ -201,8 +198,11 @@ def login():
             conn2 = get_db()
             c2 = conn2.cursor()
             c2.execute('DELETE FROM active_session')
-            c2.execute('INSERT INTO active_session (id, user_id, timestamp) VALUES (1, %s, %s)',
-                       (row[0], datetime.now().isoformat()))
+            c2.execute('''INSERT INTO active_session (id, user_id, timestamp)
+                         VALUES (1, %s, %s)
+                         ON CONFLICT (id) DO UPDATE SET user_id=%s, timestamp=%s''',
+                       (row[0], datetime.now().isoformat(),
+                        row[0], datetime.now().isoformat()))
             conn2.commit()
             conn2.close()
         except Exception as e:
@@ -232,7 +232,6 @@ def whoami():
         "user_name": session.get('user_name')
     })
 
-# ---------- Sensor API ----------
 @app.route('/api/sensor-data', methods=['POST'])
 def receive_data():
     data = request.json

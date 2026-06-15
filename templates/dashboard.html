@@ -5,39 +5,70 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial; background: #f0f2f5; padding: 20px; }
-        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .topbar h1 { font-size: 1.8em; }
-        .welcome { color: #666; margin-right: 15px; font-size: 1em; }
-        .logout-btn { background: #e53935; color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.9em; }
-        .card { background: white; border-radius: 10px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 10px 0; }
-        .value { font-size: 2em; font-weight: bold; margin: 10px 0 5px; }
-        .stress-banner { padding: 15px; border-radius: 10px; text-align: center; font-size: 1.5em; color: white; margin-bottom: 15px; }
-        .bg-Low { background: #2e7d32; }
-        .bg-Medium { background: #ef6c00; }
-        .bg-High { background: #c62828; animation: pulse 1s infinite; }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.8; }
-            100% { opacity: 1; }
-        }
-        .tip-box { display: none; background: white; border-radius: 10px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .tip-box ul { padding-left: 20px; line-height: 2.2; margin-top: 10px; }
-        .tip-box li { font-size: 0.95em; color: #333; }
-        .tip-title { font-size: 1.1em; font-weight: bold; margin-bottom: 5px; }
-        .chart-card { background: white; border-radius: 10px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .timestamp { font-size: 0.75em; color: #999; margin-top: 5px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0f0f; color: #fff; padding: 20px; min-height: 100vh; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #222; }
+        .topbar h1 { font-size: 1.5em; color: #fff; }
+        .topbar-right { display: flex; align-items: center; gap: 12px; }
+        .welcome { color: #888; font-size: 0.9em; }
+        .logout-btn { background: #2a2a2a; color: #f87171; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.85em; border: 1px solid #333; }
+        .logout-btn:hover { background: #333; }
+
+        /* Sensor Connection Card */
+        .connect-card { background: #1a1a1a; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; border: 1px solid #2a2a2a; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .connect-card select { background: #252525; border: 1px solid #333; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 0.9em; cursor: pointer; }
+        .connect-card select:focus { outline: none; border-color: #7c3aed; }
+        .btn-connect { background: linear-gradient(135deg, #059669, #047857); color: white; border: none; padding: 9px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 600; }
+        .btn-disconnect { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; border: none; padding: 9px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 600; }
+        .btn-refresh { background: #252525; color: #aaa; border: 1px solid #333; padding: 9px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9em; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #555; display: inline-block; }
+        .status-dot.connected { background: #34d399; box-shadow: 0 0 8px #34d399; }
+        .status-text { font-size: 0.85em; color: #888; }
+
+        /* Stress Banner */
+        .stress-banner { padding: 16px; border-radius: 12px; text-align: center; font-size: 1.4em; font-weight: 700; color: white; margin-bottom: 20px; transition: all 0.3s; }
+        .bg-Low { background: linear-gradient(135deg, #065f46, #047857); }
+        .bg-Medium { background: linear-gradient(135deg, #92400e, #b45309); animation: pulse 2s infinite; }
+        .bg-High { background: linear-gradient(135deg, #7f1d1d, #dc2626); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.8; } }
+
+        /* Cards */
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+        .card { background: #1a1a1a; border-radius: 12px; padding: 20px; border: 1px solid #2a2a2a; }
+        .card h3 { color: #888; font-size: 0.85em; font-weight: 500; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .value { font-size: 2.2em; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .unit { font-size: 0.85em; color: #555; }
+        .timestamp { font-size: 0.75em; color: #444; margin-top: 8px; }
+
+        /* Tips */
+        .tip-box { display: none; background: #1a1a1a; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid orange; border-top: 1px solid #2a2a2a; border-right: 1px solid #2a2a2a; border-bottom: 1px solid #2a2a2a; }
+        .tip-title { font-size: 1em; font-weight: 600; margin-bottom: 12px; color: #fff; }
+        .tip-box ul { padding-left: 20px; }
+        .tip-box li { color: #ccc; font-size: 0.9em; line-height: 2; }
+
+        /* Chart */
+        .chart-card { background: #1a1a1a; border-radius: 12px; padding: 20px; border: 1px solid #2a2a2a; }
+        .chart-card h3 { color: #888; font-size: 0.85em; font-weight: 500; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
-
     <div class="topbar">
-        <h1>🧠 Stress Detection Dashboard</h1>
-        <div>
+        <h1>Stress Detection Dashboard</h1>
+        <div class="topbar-right">
             <span class="welcome">Welcome, {{ user_name }}</span>
             <a href="/logout" class="logout-btn">Logout</a>
         </div>
+    </div>
+
+    <!-- Sensor Connection -->
+    <div class="connect-card">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">Not connected</span>
+        <select id="portSelect">
+            <option value="">Select Port...</option>
+        </select>
+        <button class="btn-refresh" onclick="loadPorts()">🔄 Refresh</button>
+        <button class="btn-connect" id="connectBtn" onclick="connectSensor()">Connect</button>
+        <button class="btn-disconnect" id="disconnectBtn" onclick="disconnectSensor()" style="display:none;">Disconnect</button>
     </div>
 
     <div id="stressBanner" class="stress-banner bg-Low">Stress Level: Low</div>
@@ -46,46 +77,108 @@
         <div class="card">
             <h3>❤️ Heart Rate</h3>
             <div class="value" id="hr">--</div>
-            <span>bpm</span>
-            <div class="timestamp" id="hrTime"></div>
+            <div class="unit">bpm</div>
+            <div class="timestamp" id="lastUpdate"></div>
         </div>
         <div class="card">
             <h3>🖐️ GSR (Skin Response)</h3>
             <div class="value" id="gsr">--</div>
-            <span>units</span>
+            <div class="unit">units</div>
         </div>
     </div>
 
     <div class="tip-box" id="tipBox">
-        <div class="tip-title" id="tipTitle">💡 Stress Relief Tips</div>
+        <div class="tip-title" id="tipTitle"></div>
         <ul id="tipList"></ul>
     </div>
 
     <div class="chart-card">
         <h3>📈 History (Last 100 readings)</h3>
-        <canvas id="historyChart" height="100"></canvas>
+        <canvas id="historyChart" height="80"></canvas>
     </div>
 
     <script>
         const USER_ID = {{ user_id | default(1) }};
+        const CONNECTOR_URL = 'http://localhost:8765';
 
         const TIPS = {
             Medium: [
                 "🧘 Take 5 deep breaths — inhale 4s, hold 4s, exhale 4s",
-                "💧 Drink a glass of water and step away from your screen for 2 minutes",
+                "💧 Drink water and step away from screen for 2 minutes",
                 "🎵 Listen to calm music for a few minutes",
-                "✋ Stretch your neck and shoulders — roll them back slowly",
-                "😊 Try smiling for 30 seconds — it signals your brain to relax"
+                "✋ Stretch your neck and shoulders slowly",
+                "😊 Try smiling for 30 seconds — signals brain to relax"
             ],
             High: [
                 "🚨 Your stress is HIGH — please take a break immediately",
-                "🫁 Practice box breathing: inhale 4s → hold 4s → exhale 4s → hold 4s",
-                "🚶 Walk outside for at least 5 minutes — fresh air helps",
+                "🫁 Box breathing: inhale 4s → hold 4s → exhale 4s → hold 4s",
+                "🚶 Walk outside for at least 5 minutes",
                 "📵 Put your phone down and close unnecessary tabs",
-                "🤝 Talk to someone you trust — don't bottle it up",
-                "💤 If possible, lie down and close your eyes for 10 minutes"
+                "🤝 Talk to someone you trust",
+                "💤 Lie down and close your eyes for 10 minutes"
             ]
         };
+
+        async function loadPorts() {
+            try {
+                const res = await fetch(`${CONNECTOR_URL}/ports`);
+                const data = await res.json();
+                const select = document.getElementById('portSelect');
+                select.innerHTML = '<option value="">Select Port...</option>';
+                data.ports.forEach(port => {
+                    const opt = document.createElement('option');
+                    opt.value = port;
+                    opt.textContent = port;
+                    select.appendChild(opt);
+                });
+            } catch(e) {
+                console.log('Connector not running locally');
+            }
+        }
+
+        async function connectSensor() {
+            const port = document.getElementById('portSelect').value;
+            if (!port) { alert('Please select a port'); return; }
+            try {
+                const res = await fetch(`${CONNECTOR_URL}/connect`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ port })
+                });
+                const data = await res.json();
+                if (data.status === 'connected') {
+                    updateConnectionUI(true, port);
+                } else {
+                    alert('Connection failed: ' + data.message);
+                }
+            } catch(e) {
+                alert('Connector app not running. Start connector.py on your laptop.');
+            }
+        }
+
+        async function disconnectSensor() {
+            try {
+                await fetch(`${CONNECTOR_URL}/disconnect`, { method: 'POST' });
+                updateConnectionUI(false, null);
+            } catch(e) {
+                console.log('Error disconnecting');
+            }
+        }
+
+        function updateConnectionUI(isConnected, port) {
+            document.getElementById('statusDot').className = `status-dot ${isConnected ? 'connected' : ''}`;
+            document.getElementById('statusText').textContent = isConnected ? `Connected to ${port}` : 'Not connected';
+            document.getElementById('connectBtn').style.display = isConnected ? 'none' : 'block';
+            document.getElementById('disconnectBtn').style.display = isConnected ? 'block' : 'none';
+        }
+
+        async function checkConnectionStatus() {
+            try {
+                const res = await fetch(`${CONNECTOR_URL}/status`);
+                const data = await res.json();
+                updateConnectionUI(data.connected, data.port);
+            } catch(e) {}
+        }
 
         async function updateLatest() {
             try {
@@ -94,35 +187,26 @@
                 if (data.heart_rate !== undefined) {
                     document.getElementById('hr').textContent = data.heart_rate;
                     document.getElementById('gsr').textContent = data.gsr;
-                    document.getElementById('hrTime').textContent = 
-                        'Last updated: ' + new Date(data.timestamp).toLocaleTimeString();
+                    document.getElementById('lastUpdate').textContent = 'Updated: ' + new Date(data.timestamp).toLocaleTimeString();
 
                     const banner = document.getElementById('stressBanner');
                     banner.textContent = `Stress Level: ${data.stress_level}`;
                     banner.className = `stress-banner bg-${data.stress_level}`;
 
                     const tipBox = document.getElementById('tipBox');
-                    const tipList = document.getElementById('tipList');
-                    const tipTitle = document.getElementById('tipTitle');
-
                     if (data.stress_level === 'Medium' || data.stress_level === 'High') {
                         tipBox.style.display = 'block';
-                        tipBox.style.borderLeft = data.stress_level === 'High'
-                            ? '5px solid #c62828'
-                            : '5px solid #ef6c00';
-                        tipTitle.textContent = data.stress_level === 'High'
+                        tipBox.style.borderLeftColor = data.stress_level === 'High' ? '#dc2626' : '#f59e0b';
+                        document.getElementById('tipTitle').textContent = data.stress_level === 'High'
                             ? '🚨 High Stress Detected — Act Now!'
                             : '💡 Feeling Stressed? Try These Tips';
-                        tipList.innerHTML = TIPS[data.stress_level]
-                            .map(tip => `<li>${tip}</li>`)
-                            .join('');
+                        document.getElementById('tipList').innerHTML = TIPS[data.stress_level]
+                            .map(t => `<li>${t}</li>`).join('');
                     } else {
                         tipBox.style.display = 'none';
                     }
                 }
-            } catch(e) {
-                console.error('Update error:', e);
-            }
+            } catch(e) {}
         }
 
         let chart;
@@ -136,19 +220,23 @@
 
                 if (!chart) {
                     const ctx = document.getElementById('historyChart').getContext('2d');
+                    Chart.defaults.color = '#666';
                     chart = new Chart(ctx, {
                         type: 'line',
                         data: {
-                            labels: labels,
+                            labels,
                             datasets: [
-                                { label: 'Heart Rate', data: hrData, borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.05)', fill: true, tension: 0.3 },
-                                { label: 'GSR', data: gsrData, borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.05)', fill: true, tension: 0.3 }
+                                { label: 'Heart Rate', data: hrData, borderColor: '#f87171', backgroundColor: 'rgba(248,113,113,0.05)', fill: true, tension: 0.3, pointRadius: 0 },
+                                { label: 'GSR', data: gsrData, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.05)', fill: true, tension: 0.3, pointRadius: 0 }
                             ]
                         },
                         options: {
                             responsive: true,
-                            plugins: { legend: { position: 'top' } },
-                            scales: { y: { beginAtZero: true } }
+                            plugins: { legend: { position: 'top', labels: { color: '#888' } } },
+                            scales: {
+                                x: { grid: { color: '#222' }, ticks: { color: '#555' } },
+                                y: { grid: { color: '#222' }, ticks: { color: '#555' }, beginAtZero: true }
+                            }
                         }
                     });
                 } else {
@@ -157,13 +245,15 @@
                     chart.data.datasets[1].data = gsrData;
                     chart.update();
                 }
-            } catch(e) {
-                console.error('History error:', e);
-            }
+            } catch(e) {}
         }
 
+        // Init
+        loadPorts();
+        checkConnectionStatus();
         setInterval(updateLatest, 2000);
         setInterval(updateHistory, 5000);
+        setInterval(checkConnectionStatus, 5000);
         updateLatest();
         updateHistory();
     </script>

@@ -4,30 +4,68 @@
     <title>Register - Stress Monitor</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .box { background: white; padding: 40px; border-radius: 12px; width: 420px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2 { text-align: center; margin-bottom: 8px; color: #333; }
-        p.subtitle { text-align: center; color: #888; margin-bottom: 24px; font-size: 0.9em; }
-        label { font-size: 0.85em; color: #555; margin-bottom: 4px; display: block; }
-        input { width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95em; }
-        input:focus { outline: none; border-color: #2196F3; }
-        button { width: 100%; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 8px; font-size: 1em; cursor: pointer; }
-        button:hover { background: #1976D2; }
-        .error { color: red; font-size: 0.85em; text-align: center; margin-bottom: 10px; display: none; }
-        .success { color: green; font-size: 0.85em; text-align: center; margin-bottom: 10px; display: none; }
-        .divider { border: none; border-top: 1px solid #eee; margin: 16px 0; }
-        .section-label { font-size: 0.8em; color: #999; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .link { text-align: center; margin-top: 16px; font-size: 0.9em; color: #666; }
-        .link a { color: #2196F3; text-decoration: none; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0f0f0f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            background-image: radial-gradient(circle at 80% 50%, #1a1a2e 0%, #0f0f0f 50%);
+        }
+        .box {
+            background: #1a1a1a;
+            padding: 40px;
+            border-radius: 16px;
+            width: 440px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border: 1px solid #2a2a2a;
+        }
+        .logo { text-align: center; font-size: 2.5em; margin-bottom: 8px; }
+        h2 { text-align: center; color: #fff; font-size: 1.4em; margin-bottom: 4px; }
+        p.subtitle { text-align: center; color: #666; margin-bottom: 28px; font-size: 0.9em; }
+        label { font-size: 0.85em; color: #aaa; margin-bottom: 6px; display: block; }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 8px;
+            font-size: 0.95em;
+            color: #fff;
+            transition: border-color 0.2s;
+        }
+        input:focus { outline: none; border-color: #7c3aed; background: #2a2a2a; }
+        input::placeholder { color: #555; }
+        .divider { border: none; border-top: 1px solid #2a2a2a; margin: 16px 0; }
+        .section-label { font-size: 0.78em; color: #666; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        button {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        .error { color: #f87171; font-size: 0.85em; text-align: center; margin-bottom: 12px; display: none; background: rgba(248,113,113,0.1); padding: 8px; border-radius: 6px; }
+        .success { color: #34d399; font-size: 0.85em; text-align: center; margin-bottom: 12px; display: none; background: rgba(52,211,153,0.1); padding: 8px; border-radius: 6px; }
+        .link { text-align: center; margin-top: 20px; font-size: 0.9em; color: #666; }
+        .link a { color: #7c3aed; text-decoration: none; }
     </style>
 </head>
 <body>
 <div class="box">
-    <h2>🧠 Stress Monitor</h2>
+    <h2>Stress Monitor</h2>
     <p class="subtitle">Create your account</p>
     <div class="error" id="errorMsg"></div>
     <div class="success" id="successMsg"></div>
-
     <label>Full Name</label>
     <input type="text" id="name" placeholder="Enter your full name">
     <label>Email</label>
@@ -36,15 +74,12 @@
     <input type="password" id="password" placeholder="Create a password">
     <label>Phone Number</label>
     <input type="text" id="phone" placeholder="Your phone number">
-
     <hr class="divider">
-    <div class="section-label">Caregiver / Parent Details (for alerts)</div>
-
+    <div class="section-label">👨‍👩‍👧 Caregiver / Parent Details (for alerts)</div>
     <label>Caregiver Email</label>
-    <input type="email" id="caregiver_email" placeholder="Caregiver's email">
+    <input type="email" id="caregiver_email" placeholder="Caregiver's email (optional)">
     <label>Caregiver Phone</label>
-    <input type="text" id="caregiver_phone" placeholder="Caregiver's phone number">
-
+    <input type="text" id="caregiver_phone" placeholder="Caregiver's phone (optional)">
     <button onclick="register()">Create Account</button>
     <div class="link">Already have an account? <a href="/login">Login here</a></div>
 </div>
@@ -54,18 +89,15 @@ async function register() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const phone = document.getElementById('phone').value;
-    const caregiver_email = document.getElementById('caregiver_email').value;
-    const caregiver_phone = document.getElementById('caregiver_phone').value;
-
-    if (!name || !email || !password || !phone) {
-        showError('Please fill in all required fields');
-        return;
-    }
-
+    if (!name || !email || !password || !phone) { showError('Please fill in all required fields'); return; }
     const res = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, phone, caregiver_email, caregiver_phone })
+        body: JSON.stringify({
+            name, email, password, phone,
+            caregiver_email: document.getElementById('caregiver_email').value,
+            caregiver_phone: document.getElementById('caregiver_phone').value
+        })
     });
     const data = await res.json();
     if (data.status === 'success') {
@@ -76,7 +108,6 @@ async function register() {
         showError(data.message);
     }
 }
-
 function showError(msg) {
     const el = document.getElementById('errorMsg');
     el.textContent = msg;
