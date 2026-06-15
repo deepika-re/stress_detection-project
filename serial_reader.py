@@ -4,7 +4,7 @@ import time
 
 SERIAL_PORT = '/dev/cu.usbserial-0001'
 BAUD_RATE = 115200
-BASE_URL = 'https://stress-alert-detection-production.up.railway.app'
+BASE_URL = 'https://stress-detection-project.up.railway.app'
 def get_active_user():
     try:
         res = requests.get(f'{BASE_URL}/api/active-user', proxies={})

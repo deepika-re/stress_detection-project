@@ -17,25 +17,35 @@ current_port = None
 ser = None
 thread = None
 
+# At top, outside the function
+cached_user_id = None
+last_user_fetch = 0
+
 def read_serial():
-    global connected, ser
+    global connected, ser, cached_user_id, last_user_fetch
     while connected and ser:
         try:
             line = ser.readline().decode('utf-8').strip()
-            print(f"RAW: {line}")
             if line.startswith("HR:"):
                 parts = line.split(",")
                 hr_value = float(parts[0].split(":")[1].strip())
                 gsr_value = float(parts[1].split(":")[1].strip())
 
-                # get active user
-                res = requests.get(f'{RAILWAY_URL}/api/active-user', proxies={})
-                user_id = res.json().get('user_id')
-                if not user_id:
+                if hr_value == 0 and gsr_value == 0:
+                    continue
+
+                # Only re-fetch user every 30 seconds
+                now = time.time()
+                if cached_user_id is None or (now - last_user_fetch) > 30:
+                    res = requests.get(f'{RAILWAY_URL}/api/active-user', proxies={})
+                    cached_user_id = res.json().get('user_id')
+                    last_user_fetch = now
+
+                if not cached_user_id:
                     continue
 
                 payload = {
-                    "user_id": user_id,
+                    "user_id": cached_user_id,
                     "heart_rate": hr_value,
                     "gsr": gsr_value
                 }
