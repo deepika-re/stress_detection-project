@@ -6,6 +6,8 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0f0f; color: #fff; padding: 20px; min-height: 100vh; }
+
+        /* Top bar */
         .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #222; }
         .topbar h1 { font-size: 1.5em; color: #fff; }
         .topbar-right { display: flex; align-items: center; gap: 12px; }
@@ -17,27 +19,41 @@
         .connect-card { background: #1a1a1a; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; border: 1px solid #2a2a2a; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .connect-card select { background: #252525; border: 1px solid #333; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 0.9em; cursor: pointer; }
         .connect-card select:focus { outline: none; border-color: #7c3aed; }
-        .btn-connect { background: linear-gradient(135deg, #059669, #047857); color: white; border: none; padding: 9px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 600; }
+        .btn-connect    { background: linear-gradient(135deg, #059669, #047857); color: white; border: none; padding: 9px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 600; }
         .btn-disconnect { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; border: none; padding: 9px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 600; }
-        .btn-refresh { background: #252525; color: #aaa; border: 1px solid #333; padding: 9px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9em; }
+        .btn-refresh    { background: #252525; color: #aaa; border: 1px solid #333; padding: 9px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9em; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #555; display: inline-block; }
         .status-dot.connected { background: #34d399; box-shadow: 0 0 8px #34d399; }
         .status-text { font-size: 0.85em; color: #888; }
 
         /* Stress Banner */
         .stress-banner { padding: 16px; border-radius: 12px; text-align: center; font-size: 1.4em; font-weight: 700; color: white; margin-bottom: 20px; transition: all 0.3s; }
-        .bg-Low { background: linear-gradient(135deg, #065f46, #047857); }
+        .bg-Low    { background: linear-gradient(135deg, #065f46, #047857); }
         .bg-Medium { background: linear-gradient(135deg, #92400e, #b45309); animation: pulse 2s infinite; }
-        .bg-High { background: linear-gradient(135deg, #7f1d1d, #dc2626); animation: pulse 1s infinite; }
+        .bg-High   { background: linear-gradient(135deg, #7f1d1d, #dc2626); animation: pulse 1s infinite; }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.8; } }
 
-        /* Cards */
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+        /* Cards grid — 3 columns */
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+        @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
         .card { background: #1a1a1a; border-radius: 12px; padding: 20px; border: 1px solid #2a2a2a; }
         .card h3 { color: #888; font-size: 0.85em; font-weight: 500; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
         .value { font-size: 2.2em; font-weight: 700; color: #fff; margin-bottom: 4px; }
         .unit { font-size: 0.85em; color: #555; }
         .timestamp { font-size: 0.75em; color: #444; margin-top: 8px; }
+
+        /* Camera card */
+        .cam-feed { width: 100%; border-radius: 8px; background: #000; object-fit: cover; display: none; margin-bottom: 12px; }
+        .cam-placeholder { width: 100%; min-height: 150px; background: #111; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #333; font-size: 0.85em; margin-bottom: 12px; border: 1px dashed #222; }
+        .emotion-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .emotion-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.78em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-calm     { background: #064e3b; color: #34d399; }
+        .badge-neutral  { background: #78350f; color: #fbbf24; }
+        .badge-stressed { background: #7f1d1d; color: #f87171; }
+        .badge-unknown,
+        .badge-no\ face { background: #1f2937; color: #9ca3af; }
+        .cam-toggle { background: #252525; color: #aaa; border: 1px solid #333; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 0.82em; transition: all 0.2s; width: 100%; }
+        .cam-toggle.active { background: #064e3b; color: #34d399; border-color: #065f46; }
 
         /* Tips */
         .tip-box { display: none; background: #1a1a1a; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid orange; border-top: 1px solid #2a2a2a; border-right: 1px solid #2a2a2a; border-bottom: 1px solid #2a2a2a; }
@@ -51,6 +67,7 @@
     </style>
 </head>
 <body>
+
     <div class="topbar">
         <h1>Stress Detection Dashboard</h1>
         <div class="topbar-right">
@@ -67,38 +84,70 @@
             <option value="">Select Port...</option>
         </select>
         <button class="btn-refresh" onclick="loadPorts()">🔄 Refresh</button>
-        <button class="btn-connect" id="connectBtn" onclick="connectSensor()">Connect</button>
+        <button class="btn-connect"    id="connectBtn"    onclick="connectSensor()">Connect</button>
         <button class="btn-disconnect" id="disconnectBtn" onclick="disconnectSensor()" style="display:none;">Disconnect</button>
     </div>
 
+    <!-- Stress Banner -->
     <div id="stressBanner" class="stress-banner bg-Low">Stress Level: Low</div>
 
+    <!-- 3-column card grid -->
     <div class="grid">
+
+        <!-- Heart Rate -->
         <div class="card">
             <h3>❤️ Heart Rate</h3>
             <div class="value" id="hr">--</div>
             <div class="unit">bpm</div>
             <div class="timestamp" id="lastUpdate"></div>
         </div>
+
+        <!-- GSR -->
         <div class="card">
             <h3>🖐️ GSR (Skin Response)</h3>
             <div class="value" id="gsr">--</div>
             <div class="unit">units</div>
         </div>
+
+        <!-- Facial Stress Camera -->
+        <div class="card">
+            <h3>📷 Facial Stress</h3>
+
+            <!-- Live camera feed (shown when active) -->
+            <img id="camFeed" class="cam-feed" src="" alt="Camera feed" />
+
+            <!-- Placeholder (shown when camera is off) -->
+            <div class="cam-placeholder" id="camPlaceholder">📵 Camera off</div>
+
+            <!-- Score + emotion badge -->
+            <div class="emotion-row">
+                <div>
+                    <div class="value" id="facialScore" style="font-size: 1.6em;">--</div>
+                    <div class="unit">stress score</div>
+                </div>
+                <span class="emotion-badge badge-unknown" id="emotionBadge">unknown</span>
+            </div>
+
+            <!-- Toggle button -->
+            <button class="cam-toggle" id="camToggle" onclick="toggleCamera()">▶ Start Camera</button>
+        </div>
+
     </div>
 
+    <!-- Tips Box -->
     <div class="tip-box" id="tipBox">
         <div class="tip-title" id="tipTitle"></div>
         <ul id="tipList"></ul>
     </div>
 
+    <!-- History Chart -->
     <div class="chart-card">
         <h3>📈 History (Last 100 readings)</h3>
         <canvas id="historyChart" height="80"></canvas>
     </div>
 
     <script>
-        const USER_ID = {{ user_id | default(1) }};
+        const USER_ID       = {{ user_id | default(1) }};
         const CONNECTOR_URL = 'http://localhost:8765';
 
         const TIPS = {
@@ -119,15 +168,17 @@
             ]
         };
 
+        // ── Port helpers ──────────────────────────────────────────────────────
+
         async function loadPorts() {
             try {
-                const res = await fetch(`${CONNECTOR_URL}/ports`);
+                const res  = await fetch(`${CONNECTOR_URL}/ports`);
                 const data = await res.json();
                 const select = document.getElementById('portSelect');
                 select.innerHTML = '<option value="">Select Port...</option>';
                 data.ports.forEach(port => {
                     const opt = document.createElement('option');
-                    opt.value = port;
+                    opt.value   = port;
                     opt.textContent = port;
                     select.appendChild(opt);
                 });
@@ -140,7 +191,7 @@
             const port = document.getElementById('portSelect').value;
             if (!port) { alert('Please select a port'); return; }
             try {
-                const res = await fetch(`${CONNECTOR_URL}/connect`, {
+                const res  = await fetch(`${CONNECTOR_URL}/connect`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ port })
@@ -160,38 +211,39 @@
             try {
                 await fetch(`${CONNECTOR_URL}/disconnect`, { method: 'POST' });
                 updateConnectionUI(false, null);
-            } catch(e) {
-                console.log('Error disconnecting');
-            }
+            } catch(e) { console.log('Error disconnecting'); }
         }
 
         function updateConnectionUI(isConnected, port) {
-            document.getElementById('statusDot').className = `status-dot ${isConnected ? 'connected' : ''}`;
+            document.getElementById('statusDot').className  = `status-dot ${isConnected ? 'connected' : ''}`;
             document.getElementById('statusText').textContent = isConnected ? `Connected to ${port}` : 'Not connected';
-            document.getElementById('connectBtn').style.display = isConnected ? 'none' : 'block';
+            document.getElementById('connectBtn').style.display    = isConnected ? 'none'  : 'block';
             document.getElementById('disconnectBtn').style.display = isConnected ? 'block' : 'none';
         }
 
         async function checkConnectionStatus() {
             try {
-                const res = await fetch(`${CONNECTOR_URL}/status`);
+                const res  = await fetch(`${CONNECTOR_URL}/status`);
                 const data = await res.json();
                 updateConnectionUI(data.connected, data.port);
             } catch(e) {}
         }
 
+        // ── Sensor data ───────────────────────────────────────────────────────
+
         async function updateLatest() {
             try {
-                const res = await fetch(`/api/latest/${USER_ID}`);
+                const res  = await fetch(`/api/latest/${USER_ID}`);
                 const data = await res.json();
                 if (data.heart_rate !== undefined) {
-                    document.getElementById('hr').textContent = data.heart_rate;
+                    document.getElementById('hr').textContent  = data.heart_rate;
                     document.getElementById('gsr').textContent = data.gsr;
-                    document.getElementById('lastUpdate').textContent = 'Updated: ' + new Date(data.timestamp).toLocaleTimeString();
+                    document.getElementById('lastUpdate').textContent =
+                        'Updated: ' + new Date(data.timestamp).toLocaleTimeString();
 
                     const banner = document.getElementById('stressBanner');
                     banner.textContent = `Stress Level: ${data.stress_level}`;
-                    banner.className = `stress-banner bg-${data.stress_level}`;
+                    banner.className   = `stress-banner bg-${data.stress_level}`;
 
                     const tipBox = document.getElementById('tipBox');
                     if (data.stress_level === 'Medium' || data.stress_level === 'High') {
@@ -200,8 +252,8 @@
                         document.getElementById('tipTitle').textContent = data.stress_level === 'High'
                             ? '🚨 High Stress Detected — Act Now!'
                             : '💡 Feeling Stressed? Try These Tips';
-                        document.getElementById('tipList').innerHTML = TIPS[data.stress_level]
-                            .map(t => `<li>${t}</li>`).join('');
+                        document.getElementById('tipList').innerHTML =
+                            TIPS[data.stress_level].map(t => `<li>${t}</li>`).join('');
                     } else {
                         tipBox.style.display = 'none';
                     }
@@ -209,13 +261,15 @@
             } catch(e) {}
         }
 
+        // ── History chart ─────────────────────────────────────────────────────
+
         let chart;
         async function updateHistory() {
             try {
-                const res = await fetch(`/api/history/${USER_ID}`);
+                const res  = await fetch(`/api/history/${USER_ID}`);
                 const data = await res.json();
-                const labels = data.map(d => new Date(d.timestamp).toLocaleTimeString()).reverse();
-                const hrData = data.map(d => d.heart_rate).reverse();
+                const labels  = data.map(d => new Date(d.timestamp).toLocaleTimeString()).reverse();
+                const hrData  = data.map(d => d.heart_rate).reverse();
                 const gsrData = data.map(d => d.gsr).reverse();
 
                 if (!chart) {
@@ -226,8 +280,8 @@
                         data: {
                             labels,
                             datasets: [
-                                { label: 'Heart Rate', data: hrData, borderColor: '#f87171', backgroundColor: 'rgba(248,113,113,0.05)', fill: true, tension: 0.3, pointRadius: 0 },
-                                { label: 'GSR', data: gsrData, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.05)', fill: true, tension: 0.3, pointRadius: 0 }
+                                { label: 'Heart Rate', data: hrData,  borderColor: '#f87171', backgroundColor: 'rgba(248,113,113,0.05)', fill: true, tension: 0.3, pointRadius: 0 },
+                                { label: 'GSR',        data: gsrData, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.05)',  fill: true, tension: 0.3, pointRadius: 0 }
                             ]
                         },
                         options: {
@@ -240,7 +294,7 @@
                         }
                     });
                 } else {
-                    chart.data.labels = labels;
+                    chart.data.labels           = labels;
                     chart.data.datasets[0].data = hrData;
                     chart.data.datasets[1].data = gsrData;
                     chart.update();
@@ -248,14 +302,85 @@
             } catch(e) {}
         }
 
-        // Init
+        // ── Camera / facial stress ────────────────────────────────────────────
+
+        let cameraOn = false;
+
+        async function toggleCamera() {
+            const btn         = document.getElementById('camToggle');
+            const feed        = document.getElementById('camFeed');
+            const placeholder = document.getElementById('camPlaceholder');
+
+            if (!cameraOn) {
+                try {
+                    await fetch(`${CONNECTOR_URL}/facial/start`, { method: 'POST' });
+                } catch(e) {
+                    alert('Connector not running. Make sure connector.py is started.');
+                    return;
+                }
+                cameraOn = true;
+                btn.textContent = '⏹ Stop Camera';
+                btn.classList.add('active');
+                feed.style.display        = 'block';
+                placeholder.style.display = 'none';
+                pollFacial();
+            } else {
+                try {
+                    await fetch(`${CONNECTOR_URL}/facial/stop`, { method: 'POST' });
+                } catch(e) {}
+                cameraOn = false;
+                btn.textContent = '▶ Start Camera';
+                btn.classList.remove('active');
+                feed.style.display        = 'none';
+                placeholder.style.display = 'flex';
+                feed.src = '';
+                document.getElementById('facialScore').textContent = '--';
+                const badge = document.getElementById('emotionBadge');
+                badge.textContent = 'unknown';
+                badge.className   = 'emotion-badge badge-unknown';
+            }
+        }
+
+        async function pollFacial() {
+            if (!cameraOn) return;
+            try {
+                const res  = await fetch(`${CONNECTOR_URL}/facial/score`);
+                const data = await res.json();
+
+                // Update live camera frame
+                if (data.frame_b64) {
+                    document.getElementById('camFeed').src =
+                        `data:image/jpeg;base64,${data.frame_b64}`;
+                }
+
+                // Update score
+                document.getElementById('facialScore').textContent =
+                    (typeof data.stress_score === 'number')
+                        ? data.stress_score.toFixed(2)
+                        : '--';
+
+                // Update emotion badge
+                const badge   = document.getElementById('emotionBadge');
+                const emotion = (data.emotion || 'unknown').toLowerCase();
+                badge.textContent = data.emotion || 'unknown';
+                badge.className   = `emotion-badge badge-${emotion.replace(' ', '-')}`;
+
+            } catch(e) {}
+
+            // Poll at ~7 fps
+            setTimeout(pollFacial, 150);
+        }
+
+        // ── Init ──────────────────────────────────────────────────────────────
+
         loadPorts();
         checkConnectionStatus();
-        setInterval(updateLatest, 1000);
-        setInterval(updateHistory, 3000);
-        setInterval(checkConnectionStatus, 5000);
         updateLatest();
         updateHistory();
+
+        setInterval(updateLatest,          1000);
+        setInterval(updateHistory,         3000);
+        setInterval(checkConnectionStatus, 5000);
     </script>
 </body>
 </html>
