@@ -1,24 +1,42 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
-import sqlite3
+import pg8000
+import os
 from datetime import datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
+from urllib.parse import urlparse
+
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = b'stress_detect_secret_key_fixed_2024'
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-DB = 'stress_data.db'
+# ---------- DB Connection ----------
+def get_db():
+    db_url = os.environ.get('DATABASE_PUBLIC_URL') or os.environ.get('DATABASE_URL')
+    if db_url:
+        parsed = urlparse(db_url)
+        conn = pg8000.connect(
+            host=parsed.hostname,
+            port=parsed.port or 5432,
+            database=parsed.path[1:],
+            user=parsed.username,
+            password=parsed.password,
+            ssl_context=True
+        )
+    else:
+        raise Exception("No database URL found")
+    return conn
 
 def init_db():
-    conn = sqlite3.connect(DB)
+    conn = get_db()
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         name TEXT,
         email TEXT UNIQUE,
         password TEXT,
@@ -26,7 +44,7 @@ def init_db():
         caregiver_email TEXT,
         caregiver_phone TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS readings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER,
         heart_rate REAL,
         gsr REAL,
@@ -37,7 +55,7 @@ def init_db():
         user_id INTEGER,
         timestamp TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS facial_readings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER,
         dominant_emotion TEXT,
         stress_score REAL,
@@ -69,42 +87,39 @@ def calculate_stress(hr, gsr, facial_score=0.0):
         return "Low"
 
 def get_latest_facial_score(user_id):
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
     try:
-        c.execute('''SELECT stress_score FROM facial_readings
-                     WHERE user_id=? ORDER BY id DESC LIMIT 1''', (user_id,))
+        conn = get_db()
+        c = conn.cursor()
+        c.execute('SELECT stress_score FROM facial_readings WHERE user_id=%s ORDER BY id DESC LIMIT 1', (user_id,))
         row = c.fetchone()
         conn.close()
         return row[0] if row else 0.0
     except:
-        conn.close()
         return 0.0
 
 def check_and_alert(user_id, stress_level):
     print(f">>> check_and_alert called: user={user_id}, stress={stress_level}")
     if stress_level != "High":
-        print(">>> Not High, returning")
         return
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-    one_min_ago = (datetime.now() - timedelta(minutes=1)).isoformat()
-    c.execute('''SELECT COUNT(*) FROM readings
-                 WHERE user_id=? AND stress_level='High' AND timestamp >= ?''',
-              (user_id, one_min_ago))
-    count = c.fetchone()[0]
-    print(f">>> High stress count in last 1 min: {count}")
-    if count >= 1:
-        print(">>> Sending alert...")
-        c.execute('SELECT email, caregiver_email, name FROM users WHERE id=?', (user_id,))
-        user = c.fetchone()
-        print(f">>> User found: {user}")
-        if user:
-            send_email_alert(user[0], user[1], user[2])
-    conn.close()
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        one_min_ago = (datetime.now() - timedelta(minutes=1)).isoformat()
+        c.execute('''SELECT COUNT(*) FROM readings
+                     WHERE user_id=%s AND stress_level='High' AND timestamp >= %s''',
+                  (user_id, one_min_ago))
+        count = c.fetchone()[0]
+        print(f">>> High stress count: {count}")
+        if count >= 1:
+            c.execute('SELECT email, caregiver_email, name FROM users WHERE id=%s', (user_id,))
+            user = c.fetchone()
+            if user:
+                send_email_alert(user[0], user[1], user[2])
+        conn.close()
+    except Exception as e:
+        print(f"Alert error: {e}")
 
 def send_email_alert(user_email, caregiver_email, name):
-    import os
     sender_email = os.environ.get('EMAIL_USER')
     sender_password = os.environ.get('EMAIL_PASS')
     msg = MIMEText(f"ALERT: {name} has shown HIGH stress levels for over 1 minute. Please check on them immediately.")
@@ -140,11 +155,14 @@ def register_page():
 
 @app.route('/logout')
 def logout():
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-    c.execute('DELETE FROM active_session')
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute('DELETE FROM active_session')
+        conn.commit()
+        conn.close()
+    except:
+        pass
     session.clear()
     return redirect(url_for('login_page'))
 
@@ -153,52 +171,57 @@ def logout():
 def signup():
     data = request.json
     hashed_pw = generate_password_hash(data['password'])
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
     try:
+        conn = get_db()
+        c = conn.cursor()
         c.execute('''INSERT INTO users (name, email, password, phone, caregiver_email, caregiver_phone)
-                     VALUES (?, ?, ?, ?, ?, ?)''',
+                     VALUES (%s, %s, %s, %s, %s, %s)''',
                   (data['name'], data['email'], hashed_pw, data['phone'],
                    data.get('caregiver_email'), data.get('caregiver_phone')))
         conn.commit()
-        user_id = c.lastrowid
+        c.execute('SELECT id FROM users WHERE email=%s', (data['email'],))
+        user_id = c.fetchone()[0]
         conn.close()
         return jsonify({"status": "success", "user_id": user_id})
-    except sqlite3.IntegrityError:
-        conn.close()
-        return jsonify({"status": "error", "message": "Email already registered"}), 400
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
-    conn = sqlite3.connect(DB)
+    conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT id, name, email, password FROM users WHERE email=?', (data['email'],))
+    c.execute('SELECT id, name, email, password FROM users WHERE email=%s', (data['email'],))
     row = c.fetchone()
     conn.close()
     if row and check_password_hash(row[3], data['password']):
         session['user_id'] = row[0]
         session['user_name'] = row[1]
-        conn2 = sqlite3.connect(DB)
-        c2 = conn2.cursor()
-        c2.execute('DELETE FROM active_session')
-        c2.execute('INSERT INTO active_session (id, user_id, timestamp) VALUES (1, ?, ?)',
-                   (row[0], datetime.now().isoformat()))
-        conn2.commit()
-        conn2.close()
+        try:
+            conn2 = get_db()
+            c2 = conn2.cursor()
+            c2.execute('DELETE FROM active_session')
+            c2.execute('INSERT INTO active_session (id, user_id, timestamp) VALUES (1, %s, %s)',
+                       (row[0], datetime.now().isoformat()))
+            conn2.commit()
+            conn2.close()
+        except Exception as e:
+            print(f"Session error: {e}")
         return jsonify({"status": "success", "user_id": row[0], "name": row[1]})
     return jsonify({"status": "error", "message": "Invalid email or password"}), 401
 
-# ---------- Active User API ----------
 @app.route('/api/active-user')
 def active_user():
-    conn = sqlite3.connect(DB)
-    c = conn.cursor()
-    c.execute('SELECT user_id FROM active_session WHERE id=1')
-    row = c.fetchone()
-    conn.close()
-    if row:
-        return jsonify({"user_id": row[0]})
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute('SELECT user_id FROM active_session WHERE id=1')
+        row = c.fetchone()
+        conn.close()
+        if row:
+            return jsonify({"user_id": row[0]})
+    except:
+        pass
     return jsonify({"user_id": None})
 
 @app.route('/api/whoami')
@@ -219,10 +242,10 @@ def receive_data():
     facial_score = get_latest_facial_score(user_id)
     stress_level = calculate_stress(hr, gsr, facial_score)
     timestamp = datetime.now().isoformat()
-    conn = sqlite3.connect(DB)
+    conn = get_db()
     c = conn.cursor()
     c.execute('''INSERT INTO readings (user_id, heart_rate, gsr, stress_level, timestamp)
-                 VALUES (?, ?, ?, ?, ?)''', (user_id, hr, gsr, stress_level, timestamp))
+                 VALUES (%s, %s, %s, %s, %s)''', (user_id, hr, gsr, stress_level, timestamp))
     conn.commit()
     conn.close()
     check_and_alert(user_id, stress_level)
@@ -230,10 +253,10 @@ def receive_data():
 
 @app.route('/api/latest/<int:user_id>')
 def get_latest(user_id):
-    conn = sqlite3.connect(DB)
+    conn = get_db()
     c = conn.cursor()
     c.execute('''SELECT heart_rate, gsr, stress_level, timestamp
-                 FROM readings WHERE user_id=? ORDER BY id DESC LIMIT 1''', (user_id,))
+                 FROM readings WHERE user_id=%s ORDER BY id DESC LIMIT 1''', (user_id,))
     row = c.fetchone()
     conn.close()
     if row:
@@ -243,10 +266,10 @@ def get_latest(user_id):
 
 @app.route('/api/history/<int:user_id>')
 def get_history(user_id):
-    conn = sqlite3.connect(DB)
+    conn = get_db()
     c = conn.cursor()
     c.execute('''SELECT heart_rate, gsr, stress_level, timestamp
-                 FROM readings WHERE user_id=? ORDER BY id DESC LIMIT 100''', (user_id,))
+                 FROM readings WHERE user_id=%s ORDER BY id DESC LIMIT 100''', (user_id,))
     rows = c.fetchall()
     conn.close()
     return jsonify([{"heart_rate": r[0], "gsr": r[1],
@@ -255,15 +278,25 @@ def get_history(user_id):
 @app.route('/api/facial-data', methods=['POST'])
 def facial_data():
     data = request.json
-    conn = sqlite3.connect(DB)
+    conn = get_db()
     c = conn.cursor()
     c.execute('''INSERT INTO facial_readings (user_id, dominant_emotion, stress_score, timestamp)
-                 VALUES (?, ?, ?, ?)''',
+                 VALUES (%s, %s, %s, %s)''',
               (data['user_id'], data['dominant_emotion'],
                data['stress_score_from_face'], datetime.now().isoformat()))
     conn.commit()
     conn.close()
     return jsonify({"status": "ok"})
+
+@app.route('/api/all-users')
+def all_users():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT id, name, email, phone, caregiver_email FROM users')
+    rows = c.fetchall()
+    conn.close()
+    return jsonify([{"id": r[0], "name": r[1], "email": r[2],
+                     "phone": r[3], "caregiver_email": r[4]} for r in rows])
 
 if __name__ == '__main__':
     app.run(debug=False, port=8080)
