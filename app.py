@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
 from werkzeug.security import generate_password_hash, check_password_hash
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = b'stress_detect_secret_key_fixed_2024'
